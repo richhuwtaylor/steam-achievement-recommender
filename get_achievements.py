@@ -1,6 +1,5 @@
 import requests
 from tqdm import tqdm
-from typing import List
 import datetime
 import sqlite3
 from config import Config
@@ -14,16 +13,23 @@ def get_player_achievements(api_key, steam_id, appid):
     url = f"http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid={appid}&key={api_key}&steamid={steam_id}"
     response = requests.get(url)
     
+    achievements = []
+
     if response.status_code == 200:
-        return response.json().get('playerstats', {}).get('achievements', [])
-    else:
-        return []
+        player_stats = response.json().get('playerstats', {})
+        for achievement in player_stats.get('achievements', []):
+            if achievement.get('achieved') == 1:
+                achievements.append({
+                    'apiname': achievement.get('apiname'),
+                    'unlocktime': achievement.get('unlocktime')
+                })
 
-def save_player_achievements_to_sqlite(api_key, steam_id, appid, db_file='achievements.db'):
+    return achievements
+
+def save_player_achievements_to_sqlite(achievements, steam_id, appid, db_file='achievements.db'):
     current_time = datetime.datetime.now()
-    player_achievements = get_player_achievements(api_key, steam_id, appid)
 
-    if player_achievements:
+    if achievements:
         conn = sqlite3.connect(db_file)
         cursor = conn.cursor()
         
@@ -38,12 +44,11 @@ def save_player_achievements_to_sqlite(api_key, steam_id, appid, db_file='achiev
             )
         ''')
         
-        for achievement in player_achievements:
-            if achievement.get('achieved') == 1:
-                cursor.execute('''
-                    INSERT OR IGNORE INTO achievements (steamid, appid, apiname, unlocked, retrieved)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (steam_id, appid, achievement.get('apiname'), achievement.get('unlocktime'), current_time))
+        for achievement in achievements:
+            cursor.execute('''
+                INSERT OR IGNORE INTO achievements (steamid, appid, apiname, unlocked, retrieved)
+                VALUES (?, ?, ?, ?, ?)
+            ''', (steam_id, appid, achievement.get('apiname'), achievement.get('unlocktime'), current_time))
         
         conn.commit()
         conn.close()
@@ -61,7 +66,8 @@ def get_achievements_for_appid(appid, num_steam_ids_to_retrieve=10000):
 
         with tqdm(total=len(unique_steam_ids), desc="Fetching Achievements", unit=" IDs") as pbar:
             for steam_id in unique_steam_ids:
-                save_success = save_player_achievements_to_sqlite(API_KEY, steam_id, appid)
+                achievements = get_player_achievements(API_KEY, steam_id, appid)
+                save_success = save_player_achievements_to_sqlite(achievements, steam_id, appid)
                 if save_success:
                     pbar.update(1)
 
