@@ -6,7 +6,7 @@ import torch
 from spotlight.interactions import Interactions
 from spotlight.sequence.implicit import ImplicitSequenceModel
 from tqdm import tqdm
-from data_utils import load_achievement_descriptions_from_sqlite, load_interactions_from_sqlite
+from data_utils import interactions_to_sequences, load_achievement_descriptions_from_sqlite, load_interactions_from_sqlite
 
 def train_and_save_model(appid, loss='adaptive_hinge', representation='lstm', embedding_dim=32, n_iter=10, batch_size=256, l2=0.0, learning_rate=0.01, model_dir='models'):
     """
@@ -24,7 +24,6 @@ def train_and_save_model(appid, loss='adaptive_hinge', representation='lstm', em
     - model_dir (str, optional): Directory to save the trained model. Default is 'models'.
     """
     # Load achievement descriptions and interactions from SQLite database
-    df_achievements = load_achievement_descriptions_from_sqlite(appid)
     df_interactions = load_interactions_from_sqlite(appid)
 
     # Create dictionaries of Steam IDs and achievement names onto internal IDs used by the model
@@ -61,7 +60,10 @@ def train_and_save_model(appid, loss='adaptive_hinge', representation='lstm', em
         random_state=np.random.RandomState(42)
     )
 
-    model.fit(sequences, verbose=True)
+    model.fit(sequences, verbose=False)
+
+    # Add the achievement name dictionary to the model
+    model.achievement_name_dict = {v: k for k, v in achievement_name_dict.items()}
 
     # Save the trained model
     today_date = datetime.datetime.now().strftime('%Y-%m-%d')
@@ -69,9 +71,6 @@ def train_and_save_model(appid, loss='adaptive_hinge', representation='lstm', em
     model_path = os.path.join(model_dir, model_name)
     os.makedirs(model_dir, exist_ok=True)
     torch.save(model, model_path)
-
-def interactions_to_sequences(interactions, max_sequence_length):
-    return interactions.to_sequence(max_sequence_length=max_sequence_length, min_sequence_length=None, step_size=None)
 
 if __name__ == "__main__":
     import sys
