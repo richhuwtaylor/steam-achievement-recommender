@@ -10,6 +10,17 @@ if API_KEY is None:
     raise ValueError("API key not found in the configuration.")
 
 def get_player_achievements(api_key, steam_id, appid):
+    """
+    Get achievements for a specific player and game.
+
+    Parameters:
+    - api_key (str): Steam API key.
+    - steam_id (str): Steam ID of the player.
+    - appid (str): Steam App ID of the game.
+
+    Returns:
+    - list of dict: A list of dictionaries containing achieved achievements with 'apiname' and 'unlocktime'.
+    """
     url = f"http://api.steampowered.com/ISteamUserStats/GetPlayerAchievements/v0001/?appid={appid}&key={api_key}&steamid={steam_id}"
     response = requests.get(url)
     
@@ -27,6 +38,18 @@ def get_player_achievements(api_key, steam_id, appid):
     return achievements
 
 def save_player_achievements_to_sqlite(achievements, steam_id, appid, db_file='achievements.db'):
+    """
+    Save player achievements to a SQLite database.
+
+    Parameters:
+    - achievements (list of dict): List of dictionaries containing achieved achievements.
+    - steam_id (str): Steam ID of the player.
+    - appid (str): Steam App ID of the game.
+    - db_file (str, optional): SQLite database file. Default is 'achievements.db'.
+
+    Returns:
+    - bool: True if successful, False otherwise.
+    """
     current_time = datetime.datetime.now()
 
     if achievements:
@@ -34,7 +57,7 @@ def save_player_achievements_to_sqlite(achievements, steam_id, appid, db_file='a
         cursor = conn.cursor()
         
         cursor.execute('''
-            CREATE TABLE IF NOT EXISTS achievements (
+            CREATE TABLE IF NOT EXISTS achievement (
                 steamid TEXT,
                 appid INTEGER,
                 apiname TEXT,
@@ -46,7 +69,7 @@ def save_player_achievements_to_sqlite(achievements, steam_id, appid, db_file='a
         
         for achievement in achievements:
             cursor.execute('''
-                INSERT OR IGNORE INTO achievements (steamid, appid, apiname, unlocked, retrieved)
+                INSERT OR IGNORE INTO achievement (steamid, appid, apiname, unlocked, retrieved)
                 VALUES (?, ?, ?, ?, ?)
             ''', (steam_id, appid, achievement.get('apiname'), achievement.get('unlocktime'), current_time))
         
@@ -59,6 +82,16 @@ def save_player_achievements_to_sqlite(achievements, steam_id, appid, db_file='a
         return False
 
 def get_achievements_for_appid(appid, num_steam_ids_to_retrieve=10000):
+    """
+    Retrieve and save achievements for a given game and a number of Steam IDs.
+
+    Parameters:
+    - appid (str): Steam App ID of the game.
+    - num_steam_ids_to_retrieve (int, optional): Number of Steam IDs to retrieve. Default is 10000.
+
+    Returns:
+    - None
+    """
     unique_steam_ids = get_steam_ids(appid, num_steam_ids_to_retrieve)
     
     if unique_steam_ids:
