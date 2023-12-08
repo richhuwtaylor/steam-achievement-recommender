@@ -65,9 +65,9 @@ def train_and_save_model(appid, loss='adaptive_hinge', representation='lstm', em
     # Add the achievement name dictionary to the model
     model.achievement_name_dict = {v: k for k, v in achievement_name_dict.items()}
 
-    # Save the trained model
-    today_date = datetime.datetime.now().strftime('%Y-%m-%d')
-    model_name = f"{appid}_{today_date}"
+   # Save the trained model with date and time
+    today_datetime = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    model_name = f"{appid}_{today_datetime}"
     model_path = os.path.join(model_dir, model_name)
     os.makedirs(model_dir, exist_ok=True)
     torch.save(model, model_path)

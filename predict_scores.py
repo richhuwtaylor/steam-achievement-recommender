@@ -1,3 +1,4 @@
+import datetime
 import os
 import torch
 import numpy as np
@@ -21,8 +22,14 @@ def load_latest_model(appid, model_dir='models'):
     models_for_appid = [model for model in os.listdir(model_dir) if model.startswith(f"{appid}_")]
     if not models_for_appid:
         raise FileNotFoundError(f"No models found for appid {appid}. Train a model first.")
+
+    # Extract datetime from model names
+    model_datetimes = [datetime.datetime.strptime(model.split('_')[-1], '%Y-%m-%d_%H-%M-%S') for model in models_for_appid]
     
-    most_recent_model = max(models_for_appid)
+    most_recent_model_datetime = max(model_datetimes)
+    most_recent_model_index = model_datetimes.index(most_recent_model_datetime)
+    most_recent_model = models_for_appid[most_recent_model_index]
+    
     model_path = os.path.join(model_dir, most_recent_model)
     model = torch.load(model_path)
 
