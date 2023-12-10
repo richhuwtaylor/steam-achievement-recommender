@@ -1,19 +1,29 @@
+import sys
 import datetime
 import numpy as np
 import os
 import pandas as pd
 import torch
+from config import Config
 from spotlight.interactions import Interactions
 from spotlight.sequence.implicit import ImplicitSequenceModel
 from tqdm import tqdm
-from data_utils import interactions_to_sequences, load_achievement_descriptions_from_sqlite, load_interactions_from_sqlite
+from data_utils import interactions_to_sequences, load_interactions_from_sqlite
+from get_steam_ids import get_steam_ids
+from get_achievements import get_achievements_for_appid
+from get_achievement_descriptions import save_achievement_descriptions_to_sqlite
 
-def train_and_save_model(appid, loss='adaptive_hinge', representation='lstm', embedding_dim=32, n_iter=10, batch_size=256, l2=0.0, learning_rate=0.01, model_dir='models'):
+API_KEY = Config.STEAM_API_KEY
+if API_KEY is None:
+    raise ValueError("API key not found in the configuration.")
+
+def fetch_data_and_train_model(appid, n_steam_ids, loss='adaptive_hinge', representation='lstm', embedding_dim=32, n_iter=10, batch_size=256, l2=0.0, learning_rate=0.01, model_dir='models'):
     """
-    Train and save an ImplicitSequenceModel using achievement data.
+    Fetch data, train and save an ImplicitSequenceModel using achievement data.
 
     Parameters:
     - appid (str): Steam App ID of the game.
+    - n_steam_ids (int): Number of Steam IDs to retrieve.
     - loss (str, optional): Loss function. Default is 'adaptive_hinge'.
     - representation (str, optional): Type of sequence representation. Default is 'lstm'.
     - embedding_dim (int, optional): Dimensionality of embedding vectors. Default is 32.
@@ -23,14 +33,18 @@ def train_and_save_model(appid, loss='adaptive_hinge', representation='lstm', em
     - learning_rate (float, optional): Learning rate for training. Default is 0.01.
     - model_dir (str, optional): Directory to save the trained model. Default is 'models'.
     """
-    # Load achievement descriptions and interactions from SQLite database
-    df_interactions = load_interactions_from_sqlite(appid)
 
-    # Create dictionaries of Steam IDs and achievement names onto internal IDs used by the model
+    # Fetch achievements for the game and number of Steam IDs
+    get_achievements_for_appid(appid, n_steam_ids)
+
+    # Save achievement descriptions to SQLite
+    save_achievement_descriptions_to_sqlite(API_KEY, appid)
+
+    # Proceed with model training
+    df_interactions = load_interactions_from_sqlite(appid)
     steam_id_dict = {steam_id: idx + 1 for idx, steam_id in enumerate(df_interactions['steamid'].unique())}
     achievement_name_dict = {apiname: idx + 1 for idx, apiname in enumerate(df_interactions['apiname'].unique())}
 
-    # Replace 'steamid' and 'apiname' with integers using the dictionaries
     df_interactions['steamid'] = df_interactions['steamid'].map(steam_id_dict)
     df_interactions['apiname'] = df_interactions['apiname'].map(achievement_name_dict)
 
@@ -73,10 +87,10 @@ def train_and_save_model(appid, loss='adaptive_hinge', representation='lstm', em
     torch.save(model, model_path)
 
 if __name__ == "__main__":
-    import sys
-
-    if len(sys.argv) != 2:
-        print("Usage: python train_model.py <appid>")
+    if len(sys.argv) != 3:
+        print("Usage: python train_model.py <appid> <n_steam_ids>")
     else:
         appid = sys.argv[1]
-        train_and_save_model(appid)
+        n_steam_ids = int(sys.argv[2])
+
+        fetch_data_and_train_model(appid, n_steam_ids)

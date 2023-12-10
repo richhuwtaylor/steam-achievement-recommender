@@ -31,7 +31,7 @@ def load_interactions_from_sqlite(appid, db_file='achievements.db'):
         pd.DataFrame: DataFrame containing player-achievement interactions.
     """
     conn = sqlite3.connect(db_file)
-    query = f"SELECT * FROM achievements WHERE appid = {appid}"
+    query = f"SELECT * FROM achievement WHERE appid = {appid}"
     df_interactions = pd.read_sql(query, conn)
     conn.close()
 
@@ -39,3 +39,5 @@ def load_interactions_from_sqlite(appid, db_file='achievements.db'):
 
 def interactions_to_sequences(interactions, max_sequence_length):
     return interactions.to_sequence(max_sequence_length=max_sequence_length, min_sequence_length=None, step_size=None)
+
+
