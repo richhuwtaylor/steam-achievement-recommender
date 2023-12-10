@@ -8,7 +8,7 @@ from data_utils import interactions_to_sequences, load_achievement_descriptions_
 from get_achievements import get_player_achievements
 from config import Config
 
-def load_latest_model(appid, model_dir='models'):
+def load_latest_model(appid):
     """
     Load the latest trained model for a given appid.
 
@@ -19,7 +19,7 @@ def load_latest_model(appid, model_dir='models'):
     Returns:
         spotlight.sequence.implicit.ImplicitSequenceModel: Loaded model.
     """
-    models_for_appid = [model for model in os.listdir(model_dir) if model.startswith(f"{appid}_")]
+    models_for_appid = [model for model in os.listdir(Config.MODEL_DIR) if model.startswith(f"{appid}_")]
     if not models_for_appid:
         raise FileNotFoundError(f"No models found for appid {appid}. Train a model first.")
 
@@ -30,7 +30,7 @@ def load_latest_model(appid, model_dir='models'):
     most_recent_model_index = model_datetimes.index(most_recent_model_datetime)
     most_recent_model = models_for_appid[most_recent_model_index]
     
-    model_path = os.path.join(model_dir, most_recent_model)
+    model_path = os.path.join(Config.MODEL_DIR, most_recent_model)
     model = torch.load(model_path)
 
     return model
@@ -167,6 +167,6 @@ if __name__ == "__main__":
         steam_id = sys.argv[1]
         appid = sys.argv[2]
         predicted_scores = predict_scores(steam_id, appid)
-        achievement_descriptions = load_achievement_descriptions_from_sqlite(appid, 'achievements.db')
+        achievement_descriptions = load_achievement_descriptions_from_sqlite(appid)
         scores_with_descriptions = join_scores_with_descriptions(predicted_scores, achievement_descriptions)
         print(scores_with_descriptions)

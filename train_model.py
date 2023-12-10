@@ -9,7 +9,6 @@ from spotlight.interactions import Interactions
 from spotlight.sequence.implicit import ImplicitSequenceModel
 from tqdm import tqdm
 from data_utils import interactions_to_sequences, load_interactions_from_sqlite
-from get_steam_ids import get_steam_ids
 from get_achievements import get_achievements_for_appid
 from get_achievement_descriptions import save_achievement_descriptions_to_sqlite
 
@@ -17,21 +16,13 @@ API_KEY = Config.STEAM_API_KEY
 if API_KEY is None:
     raise ValueError("API key not found in the configuration.")
 
-def fetch_data_and_train_model(appid, n_steam_ids, loss='adaptive_hinge', representation='lstm', embedding_dim=32, n_iter=10, batch_size=256, l2=0.0, learning_rate=0.01, model_dir='models'):
+def fetch_data_and_train_model(appid, n_steam_ids):
     """
     Fetch data, train and save an ImplicitSequenceModel using achievement data.
 
     Parameters:
     - appid (str): Steam App ID of the game.
     - n_steam_ids (int): Number of Steam IDs to retrieve.
-    - loss (str, optional): Loss function. Default is 'adaptive_hinge'.
-    - representation (str, optional): Type of sequence representation. Default is 'lstm'.
-    - embedding_dim (int, optional): Dimensionality of embedding vectors. Default is 32.
-    - n_iter (int, optional): Number of training iterations. Default is 10.
-    - batch_size (int, optional): Size of batches for training. Default is 256.
-    - l2 (float, optional): L2 regularization term. Default is 0.0.
-    - learning_rate (float, optional): Learning rate for training. Default is 0.01.
-    - model_dir (str, optional): Directory to save the trained model. Default is 'models'.
     """
 
     # Fetch achievements for the game and number of Steam IDs
@@ -64,13 +55,13 @@ def fetch_data_and_train_model(appid, n_steam_ids, loss='adaptive_hinge', repres
 
     # Train the model
     model = ImplicitSequenceModel(
-        loss=loss,
-        representation=representation,
-        embedding_dim=embedding_dim,
-        n_iter=n_iter,
-        batch_size=batch_size,
-        l2=l2,
-        learning_rate=learning_rate,
+        loss='adaptive_hinge',
+        representation='lstm',
+        embedding_dim=32,
+        n_iter=10,
+        batch_size=256,
+        l2=0.0,
+        learning_rate=0.01,
         random_state=np.random.RandomState(42)
     )
 
@@ -82,7 +73,7 @@ def fetch_data_and_train_model(appid, n_steam_ids, loss='adaptive_hinge', repres
    # Save the trained model with date and time
     today_datetime = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     model_name = f"{appid}_{today_datetime}"
-    model_path = os.path.join(model_dir, model_name)
+    model_path = os.path.join(Config.MODEL_DIR, model_name)
     os.makedirs(model_dir, exist_ok=True)
     torch.save(model, model_path)
 

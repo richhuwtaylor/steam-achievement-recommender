@@ -37,7 +37,7 @@ def get_player_achievements(api_key, steam_id, appid):
 
     return achievements
 
-def save_player_achievements_to_sqlite(achievements, steam_id, appid, db_file='achievements.db'):
+def save_player_achievements_to_sqlite(achievements, steam_id, appid):
     """
     Save player achievements to a SQLite database.
 
@@ -45,7 +45,6 @@ def save_player_achievements_to_sqlite(achievements, steam_id, appid, db_file='a
     - achievements (list of dict): List of dictionaries containing achieved achievements.
     - steam_id (str): Steam ID of the player.
     - appid (str): Steam App ID of the game.
-    - db_file (str, optional): SQLite database file. Default is 'achievements.db'.
 
     Returns:
     - bool: True if successful, False otherwise.
@@ -53,7 +52,7 @@ def save_player_achievements_to_sqlite(achievements, steam_id, appid, db_file='a
     current_time = datetime.datetime.now()
 
     if achievements:
-        conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(Config.DB_NAME)
         cursor = conn.cursor()
         
         cursor.execute('''

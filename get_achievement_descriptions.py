@@ -31,14 +31,13 @@ def retrieve_game_schema(api_key, appid):
     else:
         return None
 
-def save_achievement_descriptions_to_sqlite(api_key, appid, db_file='achievements.db'):
+def save_achievement_descriptions_to_sqlite(api_key, appid):
     """
     Saves achievement descriptions to an SQLite database.
 
     Parameters:
         api_key (str): Steam API key.
         appid (int): Steam App ID of the game.
-        db_file (str, optional): SQLite database file name. Default is 'achievements.db'.
 
     Returns:
         bool: True if the achievement descriptions are saved successfully, False otherwise.
@@ -46,7 +45,7 @@ def save_achievement_descriptions_to_sqlite(api_key, appid, db_file='achievement
     game_schema = retrieve_game_schema(api_key, appid)
 
     if game_schema and 'achievements' in game_schema['game']['availableGameStats']:
-        conn = sqlite3.connect(db_file)
+        conn = sqlite3.connect(Config.DB_NAME)
         cursor = conn.cursor()
 
         cursor.execute('''
