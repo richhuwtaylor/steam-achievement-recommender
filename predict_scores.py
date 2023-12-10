@@ -24,7 +24,7 @@ def load_latest_model(appid, model_dir='models'):
         raise FileNotFoundError(f"No models found for appid {appid}. Train a model first.")
 
     # Extract datetime from model names
-    model_datetimes = [datetime.datetime.strptime(model.split('_')[-1], '%Y-%m-%d_%H-%M-%S') for model in models_for_appid]
+    model_datetimes = [datetime.datetime.strptime('_'.join(model.split('_')[1:]), '%Y-%m-%d_%H-%M-%S') for model in models_for_appid]
     
     most_recent_model_datetime = max(model_datetimes)
     most_recent_model_index = model_datetimes.index(most_recent_model_datetime)
@@ -35,7 +35,7 @@ def load_latest_model(appid, model_dir='models'):
 
     return model
 
-def get_ranked_scores_for_user(model, user_sequence, achievement_name_dict, exclude_last_item=True):
+def get_ranked_scores_for_user(model, user_sequence, achievement_name_dict, exclude_last_item=False):
     """
     Retrieves ranked scores for a user using a specified model.
 
