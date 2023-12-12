@@ -1,6 +1,12 @@
 import requests
+from config import Config
+from get_achievements import get_player_achievements, save_player_achievements_to_sqlite
 from tqdm import tqdm
 from typing import List, Optional
+
+API_KEY = Config.STEAM_API_KEY
+if API_KEY is None:
+    raise ValueError("API key not found in the configuration.")
 
 def get_steam_ids(appid: str, n_steam_ids: int = 20) -> List[str]:
     """
@@ -49,8 +55,13 @@ def get_steam_ids(appid: str, n_steam_ids: int = 20) -> List[str]:
             break
 
         for review in reviews:
-            unique_steam_ids.add(review['author']['steamid'])
-            pbar.update(1)
+            steam_id = review['author']['steamid']
+            if steam_id not in unique_steam_ids:
+                achievements = get_player_achievements(API_KEY, steam_id, appid)
+                save_success = save_player_achievements_to_sqlite(achievements, steam_id, appid)
+                if save_success:
+                    pbar.update(1)
+                    unique_steam_ids.add(steam_id)
 
         cursor = data['cursor']
 

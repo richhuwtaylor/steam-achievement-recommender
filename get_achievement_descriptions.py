@@ -7,16 +7,16 @@ API_KEY = Config.STEAM_API_KEY
 if API_KEY is None:
     raise ValueError("API key not found in the configuration.")
 
-def retrieve_game_schema(api_key, appid):
+def get_achievement_descriptions(api_key, appid):
     """
-    Fetches game information schema from the Steam API.
+    Fetches the achievement descriptions from the Steam API.
 
     Parameters:
         api_key (str): Steam API key.
         appid (int): Steam App ID of the game.
 
     Returns:
-        dict or None: Game information schema in JSON format, or None if the request fails.
+        List or None: list of achievement descriptions, or None if the request fails.
     """
     url = f"http://api.steampowered.com/ISteamUserStats/GetSchemaForGame/v2/?key={api_key}&appid={appid}&language=english"
     response = requests.get(url)
@@ -26,8 +26,14 @@ def retrieve_game_schema(api_key, appid):
 
         if 'game' not in game_schema or 'availableGameStats' not in game_schema['game']:
             raise ValueError("Missing 'game' or 'availableGameStats' key in the game schema.")
+        
+        if 'achievements' not in game_schema['game']['availableGameStats']:
+            raise ValueError("Missing 'achievements' key in the game schema.")
+        
+        achievements = game_schema['game']['availableGameStats']['achievements']
 
-        return game_schema
+        return achievements
+    
     else:
         return None
 
@@ -42,9 +48,9 @@ def save_achievement_descriptions_to_sqlite(api_key, appid):
     Returns:
         bool: True if the achievement descriptions are saved successfully, False otherwise.
     """
-    game_schema = retrieve_game_schema(api_key, appid)
+    achievement_descriptions = get_achievement_descriptions(api_key, appid)
 
-    if game_schema and 'achievements' in game_schema['game']['availableGameStats']:
+    if achievement_descriptions:
         conn = sqlite3.connect(Config.DB_NAME)
         cursor = conn.cursor()
 
@@ -59,9 +65,7 @@ def save_achievement_descriptions_to_sqlite(api_key, appid):
             )
         ''')
 
-        achievements = game_schema['game']['availableGameStats']['achievements']
-
-        for achievement in achievements:
+        for achievement in achievement_descriptions:
             apiname = achievement.get('name', '')  # Use an empty string if 'name' is not available
             displayName = achievement.get('displayName', '')
             description = achievement.get('description', '')
@@ -78,7 +82,7 @@ def save_achievement_descriptions_to_sqlite(api_key, appid):
 
         return True
     else:
-        raise ValueError("Missing 'achievements' key in the game schema or failed to retrieve game schema.")
+        raise ValueError("Failed to retrieve achievement descriptions from game schema.")
 
 if __name__ == "__main__":
     import sys

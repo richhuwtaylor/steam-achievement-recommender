@@ -3,7 +3,7 @@ from tqdm import tqdm
 import datetime
 import sqlite3
 from config import Config
-from get_steam_ids import get_steam_ids
+from get_achievement_descriptions import get_achievement_descriptions
 
 API_KEY = Config.STEAM_API_KEY
 if API_KEY is None:
@@ -80,30 +80,68 @@ def save_player_achievements_to_sqlite(achievements, steam_id, appid):
     else:
         return False
 
-def get_achievements_for_appid(appid, num_steam_ids_to_retrieve=10000):
+def get_achievements_for_appid(appid: str, n_steam_ids: int = 10000):
     """
     Retrieve and save achievements for a given game and a number of Steam IDs.
 
     Parameters:
     - appid (str): Steam App ID of the game.
-    - num_steam_ids_to_retrieve (int, optional): Number of Steam IDs to retrieve. Default is 10000.
+    - n_steam_ids (int, optional): Number of Steam IDs to retrieve. Default is 10000.
 
     Returns:
     - None
     """
-    unique_steam_ids = get_steam_ids(appid, num_steam_ids_to_retrieve)
+    if not appid:
+        raise ValueError("AppID is not supplied.")
     
-    if unique_steam_ids:
-        print(f"Retrieved {len(unique_steam_ids)} unique SteamIDs. Fetching achievements...")
+    achievement_descriptions = get_achievement_descriptions(API_KEY, appid)
+    if not achievement_descriptions:
+        raise ValueError("No achievements found for this appid.")
 
-        with tqdm(total=len(unique_steam_ids), desc="Fetching Achievements", unit=" IDs") as pbar:
-            for steam_id in unique_steam_ids:
+
+    cursor = '*'
+    unique_steam_ids = set()
+
+    pbar = tqdm(total=n_steam_ids, desc="Scraping Steam IDs", unit=" IDs")
+
+    while len(unique_steam_ids) < n_steam_ids:
+        reviews_url = f"https://store.steampowered.com/appreviews/{appid}?json=1&filter=recent"
+        try:
+            response = requests.get(reviews_url, params={'cursor': cursor})
+            response.raise_for_status()
+            data = response.json()
+        except requests.RequestException as e:
+            print(f"Request failed: {e}")
+            break
+        except ValueError as e:
+            print(f"Failed to parse JSON: {e}")
+            break
+
+        if data.get("success") != 1:
+            print("Error: Unable to retrieve data.")
+            break
+
+        num_reviews_on_page = data['query_summary']['num_reviews']
+        reviews = data['reviews']
+
+        if num_reviews_on_page == 0 or data['cursor'] == "":
+            break
+
+        for review in reviews:
+            steam_id = review['author']['steamid']
+            if steam_id not in unique_steam_ids:
                 achievements = get_player_achievements(API_KEY, steam_id, appid)
                 save_success = save_player_achievements_to_sqlite(achievements, steam_id, appid)
                 if save_success:
                     pbar.update(1)
+                    unique_steam_ids.add(steam_id)
 
-        print("Achievements retrieval and storage completed.")
+        cursor = data['cursor']
+
+    pbar.close()
+
+    if unique_steam_ids:
+        print(f"Achievements retrieval and storage for {len(unique_steam_ids)} Steam IDs completed.")
     else:
         print("No Steam IDs were retrieved. Exiting.")
 

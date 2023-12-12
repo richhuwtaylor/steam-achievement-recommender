@@ -143,16 +143,21 @@ def predict_scores(steam_id, appid):
     player_achievements = get_player_achievements(api_key, steam_id, appid)
 
     if player_achievements:
+        missing_achievements = set(achievement_name_dict.keys()) - set([achievement['apiname'] for achievement in player_achievements])
 
-        interactions = convert_achievements_to_interactions(player_achievements, achievement_name_dict)
+        if missing_achievements:
+            interactions = convert_achievements_to_interactions(player_achievements, achievement_name_dict)
 
-        # Convert player achievements to sequence
-        player_sequence = interactions_to_sequences(interactions, max_sequence_length).sequences[0]
+            # Convert player achievements to sequence
+            player_sequence = interactions_to_sequences(interactions, max_sequence_length).sequences[0]
 
-        # Get ranked scores for the player using the model
-        scores_series = get_ranked_scores_for_user(model, player_sequence, achievement_name_dict)
+            # Get ranked scores for the player using the model
+            scores_series = get_ranked_scores_for_user(model, player_sequence, achievement_name_dict)
 
-        return scores_series
+            return scores_series
+        
+        else:
+            print(f"Player with steam_id {steam_id} already has all achievements for appid {appid}.")
 
     else:
         print(f"No achievements found for player with steam_id {steam_id} for appid {appid}.")
