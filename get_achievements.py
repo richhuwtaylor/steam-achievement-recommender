@@ -93,57 +93,64 @@ def get_achievements_for_appid(api_key, db_name, appid, n_steam_ids: 10000):
     if not appid:
         raise ValueError("AppID is not supplied.")
     
-    achievement_descriptions = get_achievement_descriptions(api_key, appid)
-    if not achievement_descriptions:
-        raise ValueError("No achievements found for this appid.")
-    if len(achievement_descriptions) == 1:
-        raise ValueError("Unable to produce model for games with a single achievement.")
+    try:
+        achievement_descriptions = get_achievement_descriptions(api_key, appid)
+        if not achievement_descriptions:
+            raise ValueError("No achievements found for this appid.")
+        if len(achievement_descriptions) == 1:
+            raise ValueError("Unable to produce model for games with a single achievement.")
 
-    cursor = '*'
-    unique_steam_ids = set()
+        cursor = '*'
+        unique_steam_ids = set()
 
-    pbar = tqdm(total=n_steam_ids, desc="Scraping Steam IDs", unit=" IDs")
+        pbar = tqdm(total=n_steam_ids, desc="Scraping Steam IDs", unit=" IDs")
 
-    while len(unique_steam_ids) < n_steam_ids:
-        reviews_url = f"https://store.steampowered.com/appreviews/{appid}?json=1&filter=recent"
-        try:
-            response = requests.get(reviews_url, params={'cursor': cursor})
-            response.raise_for_status()
-            data = response.json()
-        except requests.RequestException as e:
-            print(f"Request failed: {e}")
-            break
-        except ValueError as e:
-            print(f"Failed to parse JSON: {e}")
-            break
+        while len(unique_steam_ids) < n_steam_ids:
+            reviews_url = f"https://store.steampowered.com/appreviews/{appid}?json=1&filter=recent"
+            try:
+                response = requests.get(reviews_url, params={'cursor': cursor})
+                response.raise_for_status()
+                data = response.json()
+            except requests.RequestException as e:
+                print(f"Request failed: {e}")
+                break
+            except ValueError as e:
+                print(f"Failed to parse JSON: {e}")
+                break
 
-        if data.get("success") != 1:
-            print("Error: Unable to retrieve data.")
-            break
+            if data.get("success") != 1:
+                print("Error: Unable to retrieve data.")
+                break
 
-        num_reviews_on_page = data['query_summary']['num_reviews']
-        reviews = data['reviews']
+            num_reviews_on_page = data['query_summary']['num_reviews']
+            reviews = data['reviews']
 
-        if num_reviews_on_page == 0 or data['cursor'] == "":
-            break
+            if num_reviews_on_page == 0 or data['cursor'] == "":
+                break
 
-        for review in reviews:
-            steam_id = review['author']['steamid']
-            if steam_id not in unique_steam_ids:
-                achievements = get_player_achievements(api_key, steam_id, appid)
-                save_success = save_player_achievements_to_sqlite(db_name, achievements, steam_id, appid)
-                if save_success:
-                    pbar.update(1)
-                    unique_steam_ids.add(steam_id)
+            for review in reviews:
+                steam_id = review['author']['steamid']
+                if steam_id not in unique_steam_ids:
+                    achievements = get_player_achievements(api_key, steam_id, appid)
+                    save_success = save_player_achievements_to_sqlite(db_name, achievements, steam_id, appid)
+                    if save_success:
+                        pbar.update(1)
+                        unique_steam_ids.add(steam_id)
 
-        cursor = data['cursor']
+            cursor = data['cursor']
 
-    pbar.close()
+        pbar.close()
 
-    if unique_steam_ids:
-        print(f"Achievements retrieval and storage for {len(unique_steam_ids)} Steam IDs completed.")
-    else:
-        print("No Steam IDs were retrieved. Exiting.")
+        if unique_steam_ids:
+            print(f"Achievements retrieval and storage for {len(unique_steam_ids)} Steam IDs completed.")
+        else:
+            print("No Steam IDs were retrieved. Exiting.")
+
+    except Exception as e:
+        print(f"Error: {e}")
+        raise
+
+    return None
 
 if __name__ == "__main__":
     import sys

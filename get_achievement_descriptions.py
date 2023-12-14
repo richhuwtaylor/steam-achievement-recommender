@@ -43,43 +43,50 @@ def save_achievement_descriptions_to_sqlite(api_key, db_name, appid):
         appid (int): Steam App ID of the game.
 
     Returns:
-        bool: True if the achievement descriptions are saved successfully, False otherwise.
+        bool: True if the achievement descriptions are saved successfully.
     """
-    achievement_descriptions = get_achievement_descriptions(api_key, appid)
+    try:
+        achievement_descriptions = get_achievement_descriptions(api_key, appid)
 
-    if achievement_descriptions:
-        conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()
-
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS achievement_description (
-                appid INTEGER,
-                apiname TEXT PRIMARY KEY,
-                displayName TEXT,
-                description TEXT,
-                hidden BOOLEAN,
-                retrieved TIMESTAMP
-            )
-        ''')
-
-        for achievement in achievement_descriptions:
-            apiname = achievement.get('name', '')  # Use an empty string if 'name' is not available
-            displayName = achievement.get('displayName', '')
-            description = achievement.get('description', '')
-            hidden = bool(achievement.get('hidden', 0))  # Convert to Boolean, default is 0
-            retrieved = datetime.datetime.now()
+        if achievement_descriptions:
+            conn = sqlite3.connect(db_name)
+            cursor = conn.cursor()
 
             cursor.execute('''
-                INSERT OR REPLACE INTO achievement_description (appid, apiname, displayName, description, hidden, retrieved)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (appid, apiname, displayName, description, hidden, retrieved))
+                CREATE TABLE IF NOT EXISTS achievement_description (
+                    appid INTEGER,
+                    apiname TEXT PRIMARY KEY,
+                    displayName TEXT,
+                    description TEXT,
+                    hidden BOOLEAN,
+                    retrieved TIMESTAMP
+                )
+            ''')
 
-        conn.commit()
-        conn.close()
+            for achievement in achievement_descriptions:
+                apiname = achievement.get('name', '')  # Use an empty string if 'name' is not available
+                displayName = achievement.get('displayName', '')
+                description = achievement.get('description', '')
+                hidden = bool(achievement.get('hidden', 0))  # Convert to Boolean, default is 0
+                retrieved = datetime.datetime.now()
 
-        return True
-    else:
-        raise ValueError("Failed to retrieve achievement descriptions from game schema.")
+                cursor.execute('''
+                    INSERT OR REPLACE INTO achievement_description (appid, apiname, displayName, description, hidden, retrieved)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (appid, apiname, displayName, description, hidden, retrieved))
+
+            conn.commit()
+            conn.close()
+
+            return True
+        else:
+            raise ValueError("Failed to retrieve achievement descriptions from game schema.")
+        
+    except Exception as e:
+        # Raise a ValueError to maintain consistency
+        raise ValueError(f"Error: {e}")
+    
+    return None
 
 if __name__ == "__main__":
     import sys
