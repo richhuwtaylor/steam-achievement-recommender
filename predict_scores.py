@@ -116,11 +116,12 @@ def join_scores_with_descriptions(scores_series, achievement_descriptions):
 
     return df[['apiname', 'score', 'displayName', 'description']]
 
-def predict_scores(steam_id, appid):
+def predict_scores(api_key, steam_id, appid):
     """
     Predict and return scores for achievements of a specific player and game.
 
     Parameters:
+        api_key (str): Steam API key.
         steam_id (str): Steam ID of the player.
         appid (str): Steam App ID of the game.
 
@@ -136,10 +137,6 @@ def predict_scores(steam_id, appid):
     max_sequence_length = len(achievement_name_dict.keys())
 
     # Retrieve achievements for the player from the Steam API
-    api_key = Config.STEAM_API_KEY
-    if api_key is None:
-        raise ValueError("API key not found in the configuration.")
-
     player_achievements = get_player_achievements(api_key, steam_id, appid)
 
     if player_achievements:
@@ -171,7 +168,16 @@ if __name__ == "__main__":
     else:
         steam_id = sys.argv[1]
         appid = sys.argv[2]
-        predicted_scores = predict_scores(steam_id, appid)
-        achievement_descriptions = load_achievement_descriptions_from_sqlite(appid)
+        
+        api_key = Config.STEAM_API_KEY
+        if api_key is None:
+            raise ValueError("API key not found in the configuration.")
+        
+        db_name = Config.DB_NAME
+        if db_name is None:
+            raise ValueError("DB_NAME not found in the configuration.")
+        
+        predicted_scores = predict_scores(api_key, steam_id, appid)
+        achievement_descriptions = load_achievement_descriptions_from_sqlite(db_name, appid)
         scores_with_descriptions = join_scores_with_descriptions(predicted_scores, achievement_descriptions)
         print(scores_with_descriptions)

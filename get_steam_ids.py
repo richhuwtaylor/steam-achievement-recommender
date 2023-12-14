@@ -2,7 +2,7 @@ import requests
 from config import Config
 from get_achievements import get_player_achievements, save_player_achievements_to_sqlite
 from tqdm import tqdm
-from typing import List, Optional
+from typing import List
 
 API_KEY = Config.STEAM_API_KEY
 if API_KEY is None:

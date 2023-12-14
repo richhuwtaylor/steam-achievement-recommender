@@ -10,28 +10,26 @@ from data_utils import interactions_to_sequences, load_interactions_from_sqlite
 from get_achievements import get_achievements_for_appid
 from get_achievement_descriptions import save_achievement_descriptions_to_sqlite
 
-API_KEY = Config.STEAM_API_KEY
-if API_KEY is None:
-    raise ValueError("API key not found in the configuration.")
-
-def fetch_data_and_train_model(appid, n_steam_ids):
+def fetch_data_and_train_model(api_key, db_name, appid, n_steam_ids):
     """
     Fetch data, train, and save an ImplicitSequenceModel using achievement data.
 
     Parameters:
+    - api_key (str): Steam API key.
+    - db_name (str): Name of SQLite database.
     - appid (str): Steam App ID of the game.
     - n_steam_ids (int): Number of Steam IDs to retrieve.
     """
 
     try:
         # Fetch achievements for the game and number of Steam IDs
-        get_achievements_for_appid(appid, n_steam_ids)
+        get_achievements_for_appid(api_key, db_name, appid, n_steam_ids)
 
         # Save achievement descriptions to SQLite
-        save_achievement_descriptions_to_sqlite(API_KEY, appid)
+        save_achievement_descriptions_to_sqlite(api_key, db_name, appid)
 
         # Proceed with model training
-        df_interactions = load_interactions_from_sqlite(appid)
+        df_interactions = load_interactions_from_sqlite(db_name, appid)
         steam_id_dict = {steam_id: idx + 1 for idx, steam_id in enumerate(df_interactions['steamid'].unique())}
         achievement_name_dict = {apiname: idx + 1 for idx, apiname in enumerate(df_interactions['apiname'].unique())}
 
@@ -51,6 +49,7 @@ def fetch_data_and_train_model(appid, n_steam_ids):
         # Convert the interaction set into sequences
         max_sequence_length = len(achievement_name_dict.keys())
         sequences = interactions_to_sequences(interactions, max_sequence_length)
+
 
         # Train the model
         model = ImplicitSequenceModel(
@@ -89,5 +88,13 @@ if __name__ == "__main__":
     else:
         appid = sys.argv[1]
         n_steam_ids = int(sys.argv[2])
+        
+        api_key = Config.STEAM_API_KEY
+        if api_key is None:
+            raise ValueError("API key not found in the configuration.")
+        
+        db_name = Config.DB_NAME
+        if db_name is None:
+            raise ValueError("ADB_NAME not found in the configuration.")
 
-        fetch_data_and_train_model(appid, n_steam_ids)
+        fetch_data_and_train_model(api_key, db_name, appid, n_steam_ids)

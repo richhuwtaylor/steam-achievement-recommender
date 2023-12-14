@@ -3,10 +3,6 @@ import datetime
 import sqlite3
 from config import Config
 
-API_KEY = Config.STEAM_API_KEY
-if API_KEY is None:
-    raise ValueError("API key not found in the configuration.")
-
 def get_achievement_descriptions(api_key, appid):
     """
     Fetches the achievement descriptions from the Steam API.
@@ -37,12 +33,13 @@ def get_achievement_descriptions(api_key, appid):
     else:
         return None
 
-def save_achievement_descriptions_to_sqlite(api_key, appid):
+def save_achievement_descriptions_to_sqlite(api_key, db_name, appid):
     """
     Saves achievement descriptions to an SQLite database.
 
     Parameters:
         api_key (str): Steam API key.
+        db_name (str): Name of SQLite database.
         appid (int): Steam App ID of the game.
 
     Returns:
@@ -51,7 +48,7 @@ def save_achievement_descriptions_to_sqlite(api_key, appid):
     achievement_descriptions = get_achievement_descriptions(api_key, appid)
 
     if achievement_descriptions:
-        conn = sqlite3.connect(Config.DB_NAME)
+        conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
 
         cursor.execute('''
@@ -91,8 +88,17 @@ if __name__ == "__main__":
         print("Usage: python get_achievement_descriptions.py <appid>")
     else:
         appid = sys.argv[1]
+        
+        api_key = Config.STEAM_API_KEY
+        if api_key is None:
+            raise ValueError("API key not found in the configuration.")
+        
+        db_name = Config.DB_NAME
+        if api_key is None:
+            raise ValueError("DB_NAME not found in the configuration.")
+
         try:
-            save_success = save_achievement_descriptions_to_sqlite(API_KEY, appid)
+            save_success = save_achievement_descriptions_to_sqlite(api_key, db_name, appid)
             if save_success:
                 print("Achievement descriptions saved successfully.")
             else:

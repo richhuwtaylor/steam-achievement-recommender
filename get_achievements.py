@@ -5,10 +5,6 @@ import sqlite3
 from config import Config
 from get_achievement_descriptions import get_achievement_descriptions
 
-API_KEY = Config.STEAM_API_KEY
-if API_KEY is None:
-    raise ValueError("API key not found in the configuration.")
-
 def get_player_achievements(api_key, steam_id, appid):
     """
     Get achievements for a specific player and game.
@@ -37,11 +33,12 @@ def get_player_achievements(api_key, steam_id, appid):
 
     return achievements
 
-def save_player_achievements_to_sqlite(achievements, steam_id, appid):
+def save_player_achievements_to_sqlite(db_name, achievements, steam_id, appid):
     """
     Save player achievements to a SQLite database.
 
     Parameters:
+    - db_name (str): Name of SQLite database.
     - achievements (list of dict): List of dictionaries containing achieved achievements.
     - steam_id (str): Steam ID of the player.
     - appid (str): Steam App ID of the game.
@@ -52,7 +49,7 @@ def save_player_achievements_to_sqlite(achievements, steam_id, appid):
     current_time = datetime.datetime.now()
 
     if achievements:
-        conn = sqlite3.connect(Config.DB_NAME)
+        conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
         
         cursor.execute('''
@@ -80,11 +77,13 @@ def save_player_achievements_to_sqlite(achievements, steam_id, appid):
     else:
         return False
 
-def get_achievements_for_appid(appid: str, n_steam_ids: int = 10000):
+def get_achievements_for_appid(api_key, db_name, appid, n_steam_ids: 10000):
     """
     Retrieve and save achievements for a given game and a number of Steam IDs.
 
     Parameters:
+    - api_key (str): Steam API key.
+    - db_name (str): Name of SQLite database.
     - appid (str): Steam App ID of the game.
     - n_steam_ids (int, optional): Number of Steam IDs to retrieve. Default is 10000.
 
@@ -94,7 +93,7 @@ def get_achievements_for_appid(appid: str, n_steam_ids: int = 10000):
     if not appid:
         raise ValueError("AppID is not supplied.")
     
-    achievement_descriptions = get_achievement_descriptions(API_KEY, appid)
+    achievement_descriptions = get_achievement_descriptions(api_key, appid)
     if not achievement_descriptions:
         raise ValueError("No achievements found for this appid.")
     if len(achievement_descriptions) == 1:
@@ -131,8 +130,8 @@ def get_achievements_for_appid(appid: str, n_steam_ids: int = 10000):
         for review in reviews:
             steam_id = review['author']['steamid']
             if steam_id not in unique_steam_ids:
-                achievements = get_player_achievements(API_KEY, steam_id, appid)
-                save_success = save_player_achievements_to_sqlite(achievements, steam_id, appid)
+                achievements = get_player_achievements(api_key, steam_id, appid)
+                save_success = save_player_achievements_to_sqlite(db_name, achievements, steam_id, appid)
                 if save_success:
                     pbar.update(1)
                     unique_steam_ids.add(steam_id)
@@ -154,4 +153,13 @@ if __name__ == "__main__":
     else:
         appid = sys.argv[1]
         num_steam_ids_to_retrieve = int(sys.argv[2]) if len(sys.argv) == 3 else 10000
-        get_achievements_for_appid(appid, num_steam_ids_to_retrieve)
+        
+        api_key = Config.STEAM_API_KEY
+        if api_key is None:
+            raise ValueError("API key not found in the configuration.")
+        
+        db_name = Config.DB_NAME
+        if db_name is None:
+            raise ValueError("DB_NAME not found in the configuration.")
+        
+        get_achievements_for_appid(api_key, db_name, appid, num_steam_ids_to_retrieve)
