@@ -3,7 +3,6 @@ from tqdm import tqdm
 import datetime
 import sqlite3
 from config import Config
-from get_achievement_descriptions import get_achievement_descriptions
 
 def get_player_achievements(api_key, steam_id, appid):
     """
@@ -94,12 +93,6 @@ def get_achievements_for_appid(api_key, db_name, appid, n_steam_ids: 10000):
         raise ValueError("AppID is not supplied.")
     
     try:
-        achievement_descriptions = get_achievement_descriptions(api_key, appid)
-        if not achievement_descriptions:
-            raise ValueError("No achievements found for this appid.")
-        if len(achievement_descriptions) == 1:
-            raise ValueError("Unable to produce model for games with a single achievement.")
-
         cursor = '*'
         unique_steam_ids = set()
 
