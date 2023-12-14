@@ -97,7 +97,8 @@ def get_achievements_for_appid(appid: str, n_steam_ids: int = 10000):
     achievement_descriptions = get_achievement_descriptions(API_KEY, appid)
     if not achievement_descriptions:
         raise ValueError("No achievements found for this appid.")
-
+    if len(achievement_descriptions) == 1:
+        raise ValueError("Unable to produce model for games with a single achievement.")
 
     cursor = '*'
     unique_steam_ids = set()
