@@ -4,7 +4,7 @@ import torch
 import numpy as np
 import pandas as pd
 from spotlight.interactions import Interactions
-from data_utils import interactions_to_sequences, load_achievement_descriptions_from_sqlite    
+from data_utils import get_achievement_descriptions, interactions_to_sequences
 from get_achievements import get_player_achievements
 from config import Config
 
@@ -114,7 +114,7 @@ def join_scores_with_descriptions(scores_series, achievement_descriptions):
     df = pd.merge(scores_series.rename('score'), achievement_descriptions, left_index=True, right_on='apiname', how='left')
     df = df.sort_values(by='score', ascending=False).reset_index(drop=True)
 
-    return df[['apiname', 'score', 'displayName', 'description']]
+    return df[['apiname', 'score', 'displayName', 'description', 'hidden']]
 
 def predict_scores(api_key, steam_id, appid):
     """
@@ -178,6 +178,6 @@ if __name__ == "__main__":
             raise ValueError("DB_NAME not found in the configuration.")
         
         predicted_scores = predict_scores(api_key, steam_id, appid)
-        achievement_descriptions = load_achievement_descriptions_from_sqlite(db_name, appid)
+        achievement_descriptions = pd.DataFrame(get_achievement_descriptions(api_key, appid))
         scores_with_descriptions = join_scores_with_descriptions(predicted_scores, achievement_descriptions)
         print(scores_with_descriptions)

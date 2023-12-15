@@ -6,9 +6,8 @@ import torch
 from config import Config
 from spotlight.interactions import Interactions
 from spotlight.sequence.implicit import ImplicitSequenceModel
-from data_utils import interactions_to_sequences, load_interactions_from_sqlite
+from data_utils import get_achievement_descriptions, interactions_to_sequences, load_interactions_from_sqlite
 from get_achievements import get_achievements_for_appid
-from get_achievement_descriptions import save_achievement_descriptions_to_sqlite
 
 def fetch_data_and_train_model(api_key, db_name, appid, n_steam_ids):
     """
@@ -22,11 +21,15 @@ def fetch_data_and_train_model(api_key, db_name, appid, n_steam_ids):
     """
 
     try:
+        # Check that achievement descriptions are available before attempting to fetch player data
+        achievement_descriptions = get_achievement_descriptions(api_key, appid)
+        if not achievement_descriptions:
+            raise ValueError("No achievements found for this appid.")
+        if len(achievement_descriptions) == 1:
+            raise ValueError("Unable to produce model for games with a single achievement.")
+        
         # Fetch achievements for the game and number of Steam IDs
         get_achievements_for_appid(api_key, db_name, appid, n_steam_ids)
-
-        # Save achievement descriptions to SQLite
-        save_achievement_descriptions_to_sqlite(api_key, db_name, appid)
 
         # Proceed with model training
         df_interactions = load_interactions_from_sqlite(db_name, appid)
@@ -95,6 +98,6 @@ if __name__ == "__main__":
         
         db_name = Config.DB_NAME
         if db_name is None:
-            raise ValueError("ADB_NAME not found in the configuration.")
+            raise ValueError("DB_NAME not found in the configuration.")
 
         fetch_data_and_train_model(api_key, db_name, appid, n_steam_ids)
